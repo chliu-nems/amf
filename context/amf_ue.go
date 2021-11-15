@@ -108,7 +108,7 @@ type AmfUe struct {
 	RoutingIndicator                  string
 	AuthenticationCtx                 *models.UeAuthenticationCtx
 	AuthFailureCauseSynchFailureTimes int
-	AuthRestarted                     bool
+	IdentityRequestSendTimes          int
 	ABBA                              []uint8
 	Kseaf                             string
 	Kamf                              string
@@ -539,7 +539,7 @@ func (ue *AmfUe) ClearRegistrationRequestData(accessType models.AccessType) {
 	ue.RegistrationType5GS = 0
 	ue.IdentityTypeUsedForRegistration = 0
 	ue.AuthFailureCauseSynchFailureTimes = 0
-	ue.AuthRestarted = false
+	ue.IdentityRequestSendTimes = 0
 	ue.ServingAmfChanged = false
 	ue.RegistrationAcceptForNon3GPPAccess = nil
 	if ranUe := ue.RanUe[accessType]; ranUe != nil {

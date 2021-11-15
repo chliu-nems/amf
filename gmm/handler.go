@@ -164,6 +164,12 @@ func transport5GSMMessage(ue *context.AmfUe, anType models.AccessType,
 				return forward5GSMMessageToSMF(ue, anType, pduSessionID, smContext, smMessage)
 			}
 		} else { // AMF does not have a PDU session routing context for the PDU session ID and the UE
+			if requestType == nil {
+				ue.GmmLog.Warnf("Request type is nil")
+				gmm_message.SendDLNASTransport(ue.RanUe[anType], nasMessage.PayloadContainerTypeN1SMInfo,
+					smMessage, pduSessionID, nasMessage.Cause5GMMPayloadWasNotForwarded, nil, 0)
+				return nil
+			}
 			switch requestType.GetRequestTypeValue() {
 			// case iii) if the AMF does not have a PDU session routing context for the PDU session ID and the UE
 			// and the Request type IE is included and is set to "initial request"
@@ -1470,6 +1476,7 @@ func AuthenticationProcedure(ue *context.AmfUe, accessType models.AccessType) (b
 		}
 	} else {
 		// Request UE's SUCI by sending identity request
+		ue.IdentityRequestSendTimes++
 		gmm_message.SendIdentityRequest(ue.RanUe[accessType], accessType, nasMessage.MobileIdentity5GSTypeSuci)
 		return false, nil
 	}
@@ -1908,8 +1915,8 @@ func HandleAuthenticationResponse(ue *context.AmfUe, accessType models.AccessTyp
 		if hResStar != av5gAka.HxresStar {
 			ue.GmmLog.Errorf("HRES* Validation Failure (received: %s, expected: %s)", hResStar, av5gAka.HxresStar)
 
-			if ue.IdentityTypeUsedForRegistration == nasMessage.MobileIdentity5GSType5gGuti && !ue.AuthRestarted {
-				ue.AuthRestarted = true
+			if ue.IdentityTypeUsedForRegistration == nasMessage.MobileIdentity5GSType5gGuti && ue.IdentityRequestSendTimes == 0 {
+				ue.IdentityRequestSendTimes++
 				gmm_message.SendIdentityRequest(ue.RanUe[accessType], accessType, nasMessage.MobileIdentity5GSTypeSuci)
 				return nil
 			} else {
@@ -1942,8 +1949,8 @@ func HandleAuthenticationResponse(ue *context.AmfUe, accessType models.AccessTyp
 				ArgEAPMessage: "",
 			})
 		case models.AuthResult_FAILURE:
-			if ue.IdentityTypeUsedForRegistration == nasMessage.MobileIdentity5GSType5gGuti && !ue.AuthRestarted {
-				ue.AuthRestarted = true
+			if ue.IdentityTypeUsedForRegistration == nasMessage.MobileIdentity5GSType5gGuti && ue.IdentityRequestSendTimes == 0 {
+				ue.IdentityRequestSendTimes++
 				gmm_message.SendIdentityRequest(ue.RanUe[accessType], accessType, nasMessage.MobileIdentity5GSTypeSuci)
 				return nil
 			} else {
@@ -1978,8 +1985,8 @@ func HandleAuthenticationResponse(ue *context.AmfUe, accessType models.AccessTyp
 				ArgEAPMessage: response.EapPayload,
 			})
 		case models.AuthResult_FAILURE:
-			if ue.IdentityTypeUsedForRegistration == nasMessage.MobileIdentity5GSType5gGuti && !ue.AuthRestarted {
-				ue.AuthRestarted = true
+			if ue.IdentityTypeUsedForRegistration == nasMessage.MobileIdentity5GSType5gGuti && ue.IdentityRequestSendTimes == 0 {
+				ue.IdentityRequestSendTimes++
 				gmm_message.SendAuthenticationResult(ue.RanUe[accessType], false, response.EapPayload)
 				gmm_message.SendIdentityRequest(ue.RanUe[accessType], accessType, nasMessage.MobileIdentity5GSTypeSuci)
 				return nil
